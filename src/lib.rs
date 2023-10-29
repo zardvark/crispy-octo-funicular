@@ -5,10 +5,12 @@
 #![reexport_test_harness_main = "test_main"] //custom_test_frameworks generates "main" fxn that
                                              //calls test_runner. this renames it to "test_main"
                                              //since we don't use main
+#![feature(abi_x86_interrupt)]
 
 use core::panic::PanicInfo;
 pub mod serial;
 pub mod vga_buffer;
+pub mod interrupts;
 
 pub trait Testable {
     fn run(&self) -> ();
@@ -24,6 +26,7 @@ where
         serial_println!("[ok]");
     }
 }
+
 
 pub fn test_runner(tests: &[&dyn Testable]) { // where all [test_case]'s are passed
     serial_println!("Running {} tests", tests.len());
@@ -42,6 +45,7 @@ fn panic(_info: &PanicInfo) -> ! {
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    init();
     test_main(); //fxn created by custom_test_frameworks that calls test_runner
     loop {}
 }
@@ -67,4 +71,8 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
         let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
     }
+}
+
+pub fn init() {
+    interrupts::init_idt();
 }
