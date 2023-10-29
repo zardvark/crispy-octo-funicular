@@ -13,10 +13,18 @@ use blog_os::println;
 #[no_mangle] //use the name "_start" so linker knows entry point (compiler usually generates unique
              //name like _ZN3blog_os4_start
 pub extern "C" fn _start() -> ! { //"C" tells compiler to use C calling convention for the function
+
+    blog_os::init();
+
+    x86_64::instructions::interrupts::int3();
+
     println!("Hello {}", "Jeffrey");
     
     #[cfg(test)]
     test_main();
+
+    println!("It didn't crash");
+
     loop {}
 }
 
