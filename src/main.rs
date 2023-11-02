@@ -14,11 +14,19 @@ use blog_os::println;
              //name like _ZN3blog_os4_start
 pub extern "C" fn _start() -> ! { //"C" tells compiler to use C calling convention for the function
 
+    println!("Hello {}", "Jeffrey");
     blog_os::init();
 
-    x86_64::instructions::interrupts::int3();
+    fn stack_overflow() {
+        stack_overflow();
+    }
 
-    println!("Hello {}", "Jeffrey");
+    stack_overflow();
+
+    // Triggering a page fault:
+    //unsafe {
+    //    *(0xdeadbeef as *mut u8) = 42; //triggers page fault
+    //}
     
     #[cfg(test)]
     test_main();
