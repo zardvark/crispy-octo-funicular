@@ -2,16 +2,17 @@
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
-#![reexport_test_harness_main = "test_main"] //custom_test_frameworks generates "main" fxn that
-                                             //calls test_runner. this renames it to "test_main"
-                                             //since we don't use main
+#![reexport_test_harness_main = "test_main"]
+//custom_test_frameworks generates "main" fxn that
+//calls test_runner. this renames it to "test_main"
+//since we don't use main
 #![feature(abi_x86_interrupt)]
 
 use core::panic::PanicInfo;
 pub mod gdt;
+pub mod interrupts;
 pub mod serial;
 pub mod vga_buffer;
-pub mod interrupts;
 
 pub trait Testable {
     fn run(&self) -> ();
@@ -28,8 +29,8 @@ where
     }
 }
 
-
-pub fn test_runner(tests: &[&dyn Testable]) { // where all [test_case]'s are passed
+pub fn test_runner(tests: &[&dyn Testable]) {
+    // where all [test_case]'s are passed
     serial_println!("Running {} tests", tests.len());
     for test in tests {
         test.run();
@@ -48,14 +49,14 @@ fn panic(_info: &PanicInfo) -> ! {
 pub extern "C" fn _start() -> ! {
     init();
     test_main(); //fxn created by custom_test_frameworks that calls test_runner
-    loop {}
+    hlt_loop();
 }
 
 pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    hlt_loop();
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,4 +78,12 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 pub fn init() {
     gdt::init();
     interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
+}
+
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
